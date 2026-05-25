@@ -12,6 +12,15 @@ function getKV(context) {
   if (typeof SHORT_LINK_KV !== 'undefined' && SHORT_LINK_KV !== null) {
     return SHORT_LINK_KV;
   }
+
+  // Get request URL to detect local environment
+  const urlStr = context?.request?.url || '';
+  const isLocal = urlStr.includes('localhost') || urlStr.includes('127.0.0.1') || urlStr.includes('3000');
+
+  if (!isLocal) {
+    throw new Error("Tencent Cloud KV namespace 'link' is not defined. Please ensure you have bound your KV namespace in EdgeOne Pages project settings with the variable name 'link', and that you have triggered a new deployment to apply the settings.");
+  }
+
   return getMockKV();
 }
 
