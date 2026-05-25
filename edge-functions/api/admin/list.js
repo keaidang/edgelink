@@ -1,0 +1,173 @@
+// Helper to get the KV namespace with fallbacks and local mock database support
+function getKV(context) {
+  if (context && context.env && context.env.link) {
+    return context.env.link;
+  }
+  if (typeof link !== 'undefined' && link !== null) {
+    return link;
+  }
+  if (context && context.env && context.env.SHORT_LINK_KV) {
+    return context.env.SHORT_LINK_KV;
+  }
+  if (typeof SHORT_LINK_KV !== 'undefined' && SHORT_LINK_KV !== null) {
+    return SHORT_LINK_KV;
+  }
+  return getMockKV();
+}
+
+if (!globalThis.__mockKV) {
+  globalThis.__mockKV = new Map();
+}
+function getMockKV() {
+  return {
+    async get(key, options) {
+      const val = globalThis.__mockKV.get(key);
+      if (val === undefined || val === null) return null;
+      if (options && options.type === 'json') {
+        try {
+          return JSON.parse(val);
+        } catch(e) {
+          return val;
+        }
+      }
+      return val;
+    },
+    async put(key, value) {
+      globalThis.__mockKV.set(key, String(value));
+    },
+    async delete(key) {
+      globalThis.__mockKV.delete(key);
+    },
+    async list(options) {
+      let keys = Array.from(globalThis.__mockKV.keys());
+      if (options && options.prefix) {
+        keys = keys.filter(k => k.startsWith(options.prefix));
+      }
+      return {
+        keys: keys.map(k => ({ name: k })),
+        list_complete: true
+      };
+    }
+  };
+}
+
+// CORS Headers helper
+function corsHeaders() {
+  return {
+    'Content-Type': 'application/json; charset=UTF-8',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, DELETE',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+  };
+}
+
+// Auth Verification Helper
+function verifyAdminAuth(context) {
+  // Retrieve ADMIN_TOKEN env variable
+  const adminToken = context?.env?.ADMIN_TOKEN || (typeof ADMIN_TOKEN !== 'undefined' ? ADMIN_TOKEN : null);
+  
+  if (!adminToken) {
+    return { 
+      authorized: false, 
+      status: 403, 
+      error: 'ADMIN_TOKEN environment variable is not configured. Admin panel is locked.' 
+    };
+  }
+
+  const authHeader = context.request.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return { 
+      authorized: false, 
+      status: 401, 
+      error: 'Unauthorized. Missing Bearer Token.' 
+    };
+  }
+
+  const clientToken = authHeader.substring(7).trim();
+  if (clientToken !== adminToken) {
+    return { 
+      authorized: false, 
+      status: 401, 
+      error: 'Unauthorized. Invalid Admin Token.' 
+    };
+  }
+
+  return { authorized: true };
+}
+
+export default async function onRequest(context) {
+  const { request } = context;
+
+  // Handle preflight OPTIONS request
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders()
+    });
+  }
+
+  if (request.method !== 'GET') {
+    return new Response(JSON.stringify({ error: 'Method Not Allowed. Use GET.' }), {
+      status: 405,
+      headers: corsHeaders()
+    });
+  }
+
+  // 1. Verify Admin credentials
+  const authCheck = verifyAdminAuth(context);
+  if (!authCheck.authorized) {
+    return new Response(JSON.stringify({ error: authCheck.error }), {
+      status: authCheck.status,
+      headers: corsHeaders()
+    });
+  }
+
+  try {
+    const kv = getKV(context);
+    
+    // 2. Fetch list of keys from KV
+    const listResult = await kv.list({ prefix: 'link:' });
+    const keys = listResult.keys || [];
+
+    // 3. Resolve all link metadata concurrently
+    const links = await Promise.all(
+      keys.map(async (k) => {
+        const value = await kv.get(k.name);
+        if (!value) return null;
+
+        try {
+          // If value is a JSON string
+          return typeof value === 'string' ? JSON.parse(value) : value;
+        } catch (e) {
+          // Fallback if metadata is somehow simple text (URL only)
+          return {
+            url: value,
+            code: k.name.replace('link:', ''),
+            createdAt: new Date().toISOString(),
+            clicks: 0,
+            customCode: false
+          };
+        }
+      })
+    );
+
+    // Filter out potential nulls and sort by createdAt descending
+    const activeLinks = links
+      .filter(link => link !== null)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    return new Response(JSON.stringify({
+      success: true,
+      links: activeLinks
+    }), {
+      status: 200,
+      headers: corsHeaders()
+    });
+
+  } catch (err) {
+    return new Response(JSON.stringify({ error: `Internal Server Error: ${err.message}` }), {
+      status: 500,
+      headers: corsHeaders()
+    });
+  }
+}
