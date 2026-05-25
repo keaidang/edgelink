@@ -148,8 +148,24 @@ app.get('/app.js', (req, res) => {
   res.sendFile(path.join(__dirname, 'app.js'));
 });
 
+app.get('/qrcode.min.js', (req, res) => {
+  res.sendFile(path.join(__dirname, 'qrcode.min.js'));
+});
+
 app.get('/index.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
+app.get('/admin.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
+app.get('/admin.js', (req, res) => {
+  res.sendFile(path.join(__dirname, 'admin.js'));
 });
 
 // Root path serves index.html
@@ -165,6 +181,7 @@ app.get('/:code', async (req, res) => {
   if (
     code.includes('.') || 
     code === 'api' || 
+    code === 'admin' ||
     req.path.startsWith('/api/')
   ) {
     return res.status(404).send('Not Found');

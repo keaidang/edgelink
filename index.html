@@ -15,8 +15,8 @@
   <!-- CSS Stylesheet -->
   <link rel="stylesheet" href="style.css">
   
-  <!-- Qrcode.js CDN for client-side QR Code Generation -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" defer></script>
+  <!-- Local QR Code Library (0ms latency, offline-capable) -->
+  <script src="qrcode.min.js" defer></script>
 </head>
 <body class="dark-mode">
   <div class="bg-glow"></div>
@@ -42,16 +42,6 @@
         </div>
       </div>
     </header>
-
-    <!-- Navigation Tabs -->
-    <nav class="nav-tabs">
-      <button class="tab-btn active" id="tabShortener" onclick="switchTab('shortener')">
-        <span class="tab-icon">🔗</span>短链生成器
-      </button>
-      <button class="tab-btn" id="tabAdmin" onclick="switchTab('admin')">
-        <span class="tab-icon">⚙️</span>管理控制台
-      </button>
-    </nav>
 
     <!-- Main Content Area -->
     <main class="app-content">
@@ -149,98 +139,6 @@
           </div>
         </div>
       </section>
-
-      <!-- Section 2: Admin Dashboard -->
-      <section id="panelAdmin" class="content-panel">
-        
-        <!-- Auth Screen -->
-        <div id="adminAuthCard" class="card glass admin-auth-card">
-          <div class="card-header">
-            <h2>管理员身份验证</h2>
-            <p>请输入在 EdgeOne Pages 中配置的 <strong>ADMIN_TOKEN</strong> 环境变量以进行身份验证。</p>
-          </div>
-          
-          <form id="adminLoginForm" onsubmit="handleAdminLogin(event)">
-            <div class="form-group">
-              <label for="adminToken">管理员密钥 (Token) <span class="required">*</span></label>
-              <div class="input-wrapper">
-                <span class="input-icon">🔑</span>
-                <input type="password" id="adminToken" placeholder="输入 ADMIN_TOKEN" required autocomplete="current-password">
-              </div>
-            </div>
-            <button type="submit" class="btn btn-primary">
-              验证并进入
-            </button>
-          </form>
-        </div>
-
-        <!-- Admin Control Panel (Hidden until authorized) -->
-        <div id="adminConsole" class="admin-console hidden">
-          
-          <!-- Summary Cards -->
-          <div class="stats-grid">
-            <div class="stats-card glass">
-              <span class="stats-icon">🔗</span>
-              <div class="stats-info">
-                <div class="stats-label">短链总数</div>
-                <div id="statTotalLinks" class="stats-number">0</div>
-              </div>
-            </div>
-            <div class="stats-card glass">
-              <span class="stats-icon">📈</span>
-              <div class="stats-info">
-                <div class="stats-label">累计跳转点击</div>
-                <div id="statTotalClicks" class="stats-number">0</div>
-              </div>
-            </div>
-            <div class="stats-card glass">
-              <span class="stats-icon">⚡</span>
-              <div class="stats-info">
-                <div class="stats-label">数据库状态</div>
-                <div class="stats-number text-success">活动 (KV)</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- All Links List -->
-          <div class="card glass admin-links-card">
-            <div class="card-header flex-header">
-              <div>
-                <h2>所有短链接</h2>
-                <p>已保存在 EdgeOne KV 存储空间的所有短链列表。</p>
-              </div>
-              <div class="header-actions">
-                <input type="text" id="adminSearchInput" oninput="filterAdminLinks()" placeholder="搜索短地址/原始地址..." class="search-input">
-                <button onclick="fetchAdminLinks()" class="btn btn-secondary">
-                  🔄 刷新列表
-                </button>
-                <button onclick="handleAdminLogout()" class="btn btn-danger">
-                  🚪 退出登录
-                </button>
-              </div>
-            </div>
-            
-            <div class="table-container">
-              <table id="adminTable">
-                <thead>
-                  <tr>
-                    <th>短地址</th>
-                    <th>原始地址</th>
-                    <th>点击数</th>
-                    <th>创建时间</th>
-                    <th>操作</th>
-                  </tr>
-                </thead>
-                <tbody id="adminLinksList">
-                  <tr class="empty-row">
-                    <td colspan="5">正在加载 KV 数据...</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </section>
       
     </main>
 
@@ -269,7 +167,7 @@
 
     <!-- Footer -->
     <footer class="app-footer">
-      <p>&copy; 2026 EdgeLink. 基于 Web API Standard & Tencent Cloud EdgeOne Pages. Powered by Antigravity.</p>
+      <p>&copy; 2026 EdgeLink | 由 <a href="https://github.com/keaidang/edgelink" target="_blank" style="color: var(--accent-color); text-decoration: none;">keaidang</a> 创建 点击访问开源存储库一键部署</p>
     </footer>
   </div>
 

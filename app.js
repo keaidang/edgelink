@@ -1,24 +1,16 @@
 /* ----------------------------------------------------
  * EdgeLink Frontend Logic
- * Handles client actions, API integration, Local History,
- * QR Code creation, and Admin panel dashboard.
+ * Handles client actions, URL shortening, Local History,
+ * and QR Code creation.
  * ---------------------------------------------------- */
 
 // State management
 let localHistory = [];
-let adminLinks = [];
-let activeAdminToken = localStorage.getItem('edgelink_admin_token') || '';
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
   initHistory();
   checkUrlParams();
-  
-  // If admin token exists, try auto-login
-  if (activeAdminToken) {
-    document.getElementById('adminToken').value = activeAdminToken;
-    attemptAdminLogin(activeAdminToken);
-  }
 });
 
 // Toast notification helper
@@ -74,22 +66,6 @@ function copyText(text) {
     showToast('复制失败', 'error');
   }
   document.body.removeChild(tempInput);
-}
-
-// Tab Switching logic
-function switchTab(tabId) {
-  // Update buttons
-  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-  document.getElementById(`tab${tabId.charAt(0).toUpperCase() + tabId.slice(1)}`).classList.add('active');
-  
-  // Update panels
-  document.querySelectorAll('.content-panel').forEach(panel => panel.classList.remove('active'));
-  document.getElementById(`panel${tabId.charAt(0).toUpperCase() + tabId.slice(1)}`).classList.add('active');
-  
-  if (tabId === 'admin' && activeAdminToken) {
-    // If logged in, reload admin stats
-    fetchAdminLinks();
-  }
 }
 
 // URL query parameter check (for redirect error handling)
@@ -314,39 +290,42 @@ function showQRCode(shortUrl = null, code = null) {
   const qrUrlText = document.getElementById('qrUrlText');
   const btnDownloadQR = document.getElementById('btnDownloadQR');
   
-  container.innerHTML = '';
+  container.innerHTML = ''; // Clear container
   qrUrlText.textContent = shortUrl;
-  
-  // Render canvas
-  const canvas = document.createElement('canvas');
-  container.appendChild(canvas);
   
   // Trigger modal visibility
   document.getElementById('qrModal').classList.remove('hidden');
   
-  // Build QR Code on canvas
   if (typeof QRCode !== 'undefined') {
-    QRCode.toCanvas(canvas, shortUrl, {
+    const qrcode = new QRCode(container, {
+      text: shortUrl,
       width: 220,
-      margin: 1.5,
-      color: {
-        dark: '#0f141e',
-        light: '#ffffff'
-      }
-    }, function (error) {
-      if (error) {
-        console.error(error);
-        container.innerHTML = '<span style="color:red">二维码生成失败</span>';
-      }
+      height: 220,
+      colorDark : '#0f141e',
+      colorLight : '#ffffff',
+      correctLevel : QRCode.CorrectLevel.H
     });
     
     // Bind download action
     btnDownloadQR.onclick = () => {
+      // Find the canvas or img rendered by the library
+      const canvas = container.querySelector('canvas');
+      const img = container.querySelector('img');
+      
       const link = document.createElement('a');
       link.download = `edgelink-${code}-qr.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-      showToast('二维码开始下载', 'success');
+      
+      if (canvas) {
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        showToast('二维码已开始下载', 'success');
+      } else if (img && img.src && img.src.startsWith('data:')) {
+        link.href = img.src;
+        link.click();
+        showToast('二维码已开始下载', 'success');
+      } else {
+        showToast('未找到可下载的二维码，请重试', 'error');
+      }
     };
   } else {
     container.innerHTML = '<span style="color:red">二维码库正在加载，请重试</span>';
@@ -355,197 +334,4 @@ function showQRCode(shortUrl = null, code = null) {
 
 function closeQRModal() {
   document.getElementById('qrModal').classList.add('hidden');
-}
-
-/* ----------------------------------------------------
- * ADMIN CONTROLLER
- * ---------------------------------------------------- */
-
-// Process admin password validation
-function handleAdminLogin(e) {
-  e.preventDefault();
-  const token = document.getElementById('adminToken').value.trim();
-  attemptAdminLogin(token);
-}
-
-async function attemptAdminLogin(token) {
-  const adminAuthCard = document.getElementById('adminAuthCard');
-  const adminConsole = document.getElementById('adminConsole');
-  
-  try {
-    const response = await fetch('/api/admin/list', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    
-    const result = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(result.error || '验证失败，密码不正确');
-    }
-    
-    // Successful login
-    activeAdminToken = token;
-    localStorage.setItem('edgelink_admin_token', token);
-    
-    adminAuthCard.classList.add('hidden');
-    adminConsole.classList.remove('hidden');
-    
-    // Process listed links
-    adminLinks = result.links || [];
-    renderAdminLinks();
-    showToast('管理员验证通过', 'success');
-    
-  } catch (err) {
-    showToast(err.message, 'error');
-    // Clear invalid token
-    localStorage.removeItem('edgelink_admin_token');
-    activeAdminToken = '';
-  }
-}
-
-function handleAdminLogout() {
-  localStorage.removeItem('edgelink_admin_token');
-  activeAdminToken = '';
-  document.getElementById('adminToken').value = '';
-  
-  document.getElementById('adminConsole').classList.add('hidden');
-  document.getElementById('adminAuthCard').classList.remove('hidden');
-  showToast('已退出管理员会话', 'info');
-}
-
-// Fetch entire database links list
-async function fetchAdminLinks() {
-  if (!activeAdminToken) return;
-  
-  const listBody = document.getElementById('adminLinksList');
-  listBody.innerHTML = '<tr class="empty-row"><td colspan="5">正在刷新 KV 数据...</td></tr>';
-  
-  try {
-    const response = await fetch('/api/admin/list', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${activeAdminToken}`
-      }
-    });
-    
-    const result = await response.json();
-    if (!response.ok) {
-      throw new Error(result.error || '获取链接列表失败');
-    }
-    
-    adminLinks = result.links || [];
-    renderAdminLinks();
-    showToast('列表刷新成功', 'success');
-  } catch (err) {
-    showToast(err.message, 'error');
-    if (err.message.includes('Unauthorized') || err.message.includes('key')) {
-      handleAdminLogout();
-    }
-  }
-}
-
-function renderAdminLinks(filterQuery = '') {
-  const listBody = document.getElementById('adminLinksList');
-  
-  // Filter search
-  let filtered = adminLinks;
-  if (filterQuery) {
-    const q = filterQuery.toLowerCase();
-    filtered = adminLinks.filter(item => 
-      item.code.toLowerCase().includes(q) || 
-      item.url.toLowerCase().includes(q)
-    );
-  }
-  
-  // Render stats counters
-  document.getElementById('statTotalLinks').textContent = adminLinks.length;
-  
-  const totalClicks = adminLinks.reduce((sum, item) => sum + (item.clicks || 0), 0);
-  document.getElementById('statTotalClicks').textContent = totalClicks;
-  
-  if (filtered.length === 0) {
-    listBody.innerHTML = `
-      <tr class="empty-row">
-        <td colspan="5">${filterQuery ? '没有找到匹配的短链接' : 'KV 数据库中暂无短链接记录'}</td>
-      </tr>
-    `;
-    return;
-  }
-  
-  listBody.innerHTML = '';
-  
-  filtered.forEach(item => {
-    const row = document.createElement('tr');
-    
-    // Resolve shortURL domain dynamically
-    const origin = window.location.origin;
-    const shortUrl = `${origin}/${item.code}`;
-    
-    let dateStr = '未知';
-    if (item.createdAt) {
-      const d = new Date(item.createdAt);
-      dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-    }
-    
-    row.innerHTML = `
-      <td><a href="${shortUrl}" target="_blank" class="link-code">/${item.code}</a></td>
-      <td title="${item.url}"><a href="${item.url}" target="_blank" class="link-url">${item.url}</a></td>
-      <td><span class="clicks-badge">${item.clicks || 0}</span></td>
-      <td><span class="date-text">${dateStr}</span></td>
-      <td>
-        <div class="row-actions">
-          <button onclick="copyText('${shortUrl}')" class="btn btn-secondary btn-small">复制</button>
-          <button onclick="showQRCode('${shortUrl}', '${item.code}')" class="btn btn-secondary btn-small">二维码</button>
-          <button onclick="deleteLink('${item.code}')" class="btn btn-danger btn-small">删除</button>
-        </div>
-      </td>
-    `;
-    listBody.appendChild(row);
-  });
-}
-
-function filterAdminLinks() {
-  const query = document.getElementById('adminSearchInput').value.trim();
-  renderAdminLinks(query);
-}
-
-// Delete link action
-async function deleteLink(code) {
-  if (!confirm(`您确定要永久删除短链接 /${code} 吗？`)) {
-    return;
-  }
-  
-  try {
-    const response = await fetch(`/api/admin/delete`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${activeAdminToken}`
-      },
-      body: JSON.stringify({ code })
-    });
-    
-    const result = await response.json();
-    if (!response.ok) {
-      throw new Error(result.error || '删除失败');
-    }
-    
-    showToast(`/${code} 已成功从 KV 中删除！`, 'success');
-    
-    // Update local state and re-render
-    adminLinks = adminLinks.filter(item => item.code !== code);
-    
-    // Also remove from history if present
-    localHistory = localHistory.filter(h => h.code !== code);
-    localStorage.setItem('edgelink_history', JSON.stringify(localHistory));
-    renderHistory();
-    
-    renderAdminLinks(document.getElementById('adminSearchInput').value.trim());
-    
-  } catch (err) {
-    showToast(err.message, 'error');
-  }
 }

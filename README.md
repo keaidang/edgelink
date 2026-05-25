@@ -10,9 +10,9 @@ EdgeLink 是一款基于 **腾讯云 EdgeOne Pages** 的轻量、极速、开箱
 
 您可以通过点击下方的部署按钮，快速将本项目克隆并部署到您自己的腾讯云 EdgeOne Pages 中：
 
-[![使用 EdgeOne Pages 部署](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://edgeone.ai/pages/new?repository-url=YOUR_GITHUB_REPO_URL)
+[![使用 EdgeOne Pages 部署](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://edgeone.ai/pages/new?repository-url=https%3A%2F%2Fgithub.com%2Fkeaidang%2Fedgelink)
 
-> 💡 **部署提示**：在您将本项目克隆到您自己的 GitHub/Gitee 仓库后，请将上方链接中的 `YOUR_GITHUB_REPO_URL` 替换为您真实的仓库地址（需要进行 URL 编码），即可实现他人或自己的一键导入部署。
+> 💡 **部署提示**：上方一键部署已直接绑定您的公开仓库。若您后续将项目克隆到其他私有仓库或个人分支，可以手动把链接中的 `repository-url` 替换为您对应仓库的 URL 编码。
 
 ---
 
@@ -94,6 +94,9 @@ npm run dev
 
 ---
 
-## 📄 开源许可
+## 📄 开源许可 & 作者信息
 
-本项目基于 [MIT License](LICENSE) 协议开源。欢迎自由分发、修改和在商业项目中使用。
+- **作者**：[keaidang](https://github.com/keaidang)
+- **开源仓库**：[GitHub - keaidang/edgelink](https://github.com/keaidang/edgelink)
+
+本项目依据 [MIT License](LICENSE) 协议开源。欢迎自由修改、分发与商业化使用。

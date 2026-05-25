@@ -55,6 +55,16 @@ export default async function onRequest(context) {
   const { request, params } = context;
   const code = params.code;
 
+  if (code === 'admin') {
+    const urlObj = new URL(request.url);
+    return new Response(null, {
+      status: 302,
+      headers: {
+        'Location': `${urlObj.origin}/admin.html`
+      }
+    });
+  }
+
   if (!code) {
     // If no code, redirect to home
     const urlObj = new URL(request.url);

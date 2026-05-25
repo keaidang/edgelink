@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EdgeLink - 管理控制台</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙️</text></svg>">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Local QR Code Library (0ms latency, offline-capable) -->
+  <script src="qrcode.min.js" defer></script>
+</head>
+<body class="dark-mode">
+  <div class="bg-glow"></div>
+  
+  <div class="container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo-area">
+        <span class="logo-icon">⚙️</span>
+        <h1 class="logo-text">Edge<span>Link Admin</span></h1>
+      </div>
+      <p class="tagline">EdgeLink 短链接平台全球数据管理后台</p>
+    </header>
+
+    <!-- Content Area -->
+    <main class="app-content">
+      
+      <!-- Auth Screen -->
+      <div id="adminAuthCard" class="card glass admin-auth-card">
+        <div class="card-header">
+          <h2>管理员身份验证</h2>
+          <p>请输入在 EdgeOne Pages 中配置的 <strong>ADMIN_TOKEN</strong> 环境变量以进行身份验证。</p>
+        </div>
+        
+        <form id="adminLoginForm" onsubmit="handleAdminLogin(event)">
+          <div class="form-group">
+            <label for="adminToken">管理员密钥 (Token) <span class="required">*</span></label>
+            <div class="input-wrapper">
+              <span class="input-icon">🔑</span>
+              <input type="password" id="adminToken" placeholder="输入 ADMIN_TOKEN" required autocomplete="current-password">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">
+            验证并进入
+          </button>
+        </form>
+        <div style="text-align: center; margin-top: 20px;">
+          <a href="/" style="color: var(--text-secondary); font-size: 0.9rem; text-decoration: none;">← 返回首页生成器</a>
+        </div>
+      </div>
+
+      <!-- Admin Control Panel (Hidden until authorized) -->
+      <div id="adminConsole" class="admin-console hidden">
+        
+        <!-- Summary Cards -->
+        <div class="stats-grid">
+          <div class="stats-card glass">
+            <span class="stats-icon">🔗</span>
+            <div class="stats-info">
+              <div class="stats-label">短链总数</div>
+              <div id="statTotalLinks" class="stats-number">0</div>
+            </div>
+          </div>
+          <div class="stats-card glass">
+            <span class="stats-icon">📈</span>
+            <div class="stats-info">
+              <div class="stats-label">累计跳转点击</div>
+              <div id="statTotalClicks" class="stats-number">0</div>
+            </div>
+          </div>
+          <div class="stats-card glass">
+            <span class="stats-icon">⚡</span>
+            <div class="stats-info">
+              <div class="stats-label">数据库状态</div>
+              <div class="stats-number text-success">活动 (KV)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- All Links List -->
+        <div class="card glass admin-links-card">
+          <div class="card-header flex-header">
+            <div>
+              <h2>所有短链接</h2>
+              <p>已保存在 EdgeOne KV 存储空间的所有短链列表。</p>
+            </div>
+            <div class="header-actions">
+              <input type="text" id="adminSearchInput" oninput="filterAdminLinks()" placeholder="搜索短地址/原始地址..." class="search-input">
+              <button onclick="fetchAdminLinks()" class="btn btn-secondary">
+                🔄 刷新列表
+              </button>
+              <button onclick="handleAdminLogout()" class="btn btn-danger">
+                🚪 退出登录
+              </button>
+            </div>
+          </div>
+          
+          <div class="table-container">
+            <table id="adminTable">
+              <thead>
+                <tr>
+                  <th>短地址</th>
+                  <th>原始地址</th>
+                  <th>点击数</th>
+                  <th>创建时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="adminLinksList">
+                <tr class="empty-row">
+                  <td colspan="5">正在加载 KV 数据...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      
+    </main>
+
+    <!-- QR Code Modal (Hidden by default) -->
+    <div id="qrModal" class="modal hidden">
+      <div class="modal-overlay" onclick="closeQRModal()"></div>
+      <div class="modal-content glass">
+        <div class="modal-header">
+          <h3>短链接二维码</h3>
+          <button class="close-btn" onclick="closeQRModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div id="qrcodeContainer"></div>
+          <p id="qrUrlText"></p>
+          <small>扫描上方二维码即可直接在手机端打开短链接。</small>
+        </div>
+        <div class="modal-footer">
+          <button id="btnDownloadQR" class="btn btn-secondary">下载二维码</button>
+          <button onclick="closeQRModal()" class="btn btn-primary">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>&copy; 2026 EdgeLink Admin | 由 <a href="https://github.com/keaidang/edgelink" target="_blank" style="color: var(--accent-color); text-decoration: none;">keaidang</a> 开发并开源</p>
+    </footer>
+  </div>
+
+  <!-- Admin Panel JS Logic -->
+  <script src="admin.js" defer></script>
+</body>
+</html>
