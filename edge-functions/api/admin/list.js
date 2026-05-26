@@ -141,7 +141,10 @@ export default async function onRequest(context) {
     // 3. Resolve all link metadata concurrently
     const links = await Promise.all(
       keys.map(async (k) => {
-        const value = await kv.get(k.name);
+        const keyName = typeof k === 'string' ? k : (k?.name || k?.key);
+        if (!keyName) return null;
+
+        const value = await kv.get(keyName);
         if (!value) return null;
 
         try {
@@ -151,7 +154,7 @@ export default async function onRequest(context) {
           // Fallback if metadata is somehow simple text (URL only)
           return {
             url: value,
-            code: k.name.replace('link:', ''),
+            code: keyName.replace('link:', ''),
             createdAt: new Date().toISOString(),
             clicks: 0,
             customCode: false
