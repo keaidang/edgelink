@@ -95,13 +95,13 @@
             </div>
             <div class="header-actions">
               <input type="text" id="adminSearchInput" oninput="filterAdminLinks()" placeholder="搜索短地址/内容..." class="search-input">
-              <button id="btnBulkDelete" onclick="handleBulkDelete()" class="btn btn-danger hidden" style="padding: 8px 16px; font-size: 0.9rem; width: auto;">
+              <button id="btnBulkDelete" onclick="handleBulkDelete()" class="btn btn-danger hidden">
                 🗑️ 批量删除 (<span id="selectedCount">0</span>)
               </button>
-              <button onclick="fetchAdminLinks()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.9rem; width: auto;">
+              <button onclick="fetchAdminLinks()" class="btn btn-secondary">
                 🔄 刷新
               </button>
-              <button onclick="handleAdminLogout()" class="btn btn-danger" style="padding: 8px 16px; font-size: 0.9rem; width: auto;">
+              <button onclick="handleAdminLogout()" class="btn btn-danger">
                 🚪 退出
               </button>
             </div>
