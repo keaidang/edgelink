@@ -67,7 +67,7 @@ function htmlPage(title, bodyContent, style = '') {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title} - EdgeLink</title>
+  <title>🧷 ${title} - EdgeLink</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
@@ -476,8 +476,7 @@ export default async function onRequest(context) {
         ${badgeHtml}
         <div class="content-box" id="noteContent">${escapeHtml(linkData.text || '')}</div>
         <div class="actions">
-          <button class="btn btn-primary" onclick="copyText(document.getElementById('noteContent').textContent)">复制文字内容</button>
-          <a href="/" class="btn btn-secondary">创建我的分享</a>
+          <a href="/" class="btn btn-primary">创建我的分享</a>
         </div>
       </div>
       ${viewLimit ? `
