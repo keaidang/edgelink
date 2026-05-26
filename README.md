@@ -58,8 +58,30 @@ npm run dev
 1. 在腾讯云 EdgeOne 控制台进入 **存储 - KV**。
 2. 创建一个命名空间（例如命名为 `link`，您的 ID 为 `ns-p9i1iezwjxCp`）。
 3. 进入您的 EdgeOne Pages 项目，选择 **项目设置** -> **绑定 KV**：
-   - **变量名 (Variable Name)**: `link` (必须为 `link`，代码会自动识别该全局变量/环境变量)
+   - **变量名 (Variable Name)**: 推荐使用 **`link`**。代码中已做自适应识别，可以直接使用。
    - **KV 命名空间**: 选择您刚刚创建的命名空间。
+
+> 💡 **自定义变量名说明**：
+> 如果您在控制台绑定 KV 时使用了其他变量名（例如 **`my_kv`**），您需要修改项目下以下 **5 个边缘函数文件** 首部的 `getKV(context)` 函数：
+> - 📄 `edge-functions/api/create.js` (第 2-25 行)
+> - 📄 `edge-functions/[code].js` (第 2-25 行)
+> - 📄 `edge-functions/api/stats.js` (第 2-25 行)
+> - 📄 `edge-functions/api/admin/list.js` (第 2-25 行)
+> - 📄 `edge-functions/api/admin/delete.js` (第 2-25 行)
+> 
+> **修改示例**（假设您的变量名称为 `my_kv`）：
+> ```javascript
+> // 将原来的 'link' 字段统一替换为您的新变量名：
+> function getKV(context) {
+>   if (context && context.env && context.env.my_kv) {
+>     return context.env.my_kv;
+>   }
+>   if (typeof my_kv !== 'undefined' && my_kv !== null) {
+>     return my_kv;
+>   }
+>   // ... 保持其他不变 ...
+> }
+> ```
 
 ### 2. 配置管理员密钥 (ADMIN_TOKEN)
 1. 进入您的 EdgeOne Pages 项目，选择 **项目设置** -> **环境变量**。

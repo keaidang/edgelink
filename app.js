@@ -90,18 +90,59 @@ function checkUrlParams() {
  * SHORTENER API ACTIONS
  * ---------------------------------------------------- */
 
+// Toggle Custom Limit Input visibility
+function toggleCustomLimit() {
+  const viewLimit = document.getElementById('viewLimit').value;
+  const customLimitGroup = document.getElementById('customLimitGroup');
+  const customLimit = document.getElementById('customLimit');
+  
+  if (viewLimit === 'custom') {
+    customLimitGroup.classList.remove('hidden');
+    customLimit.required = true;
+    customLimit.focus();
+  } else {
+    customLimitGroup.classList.add('hidden');
+    customLimit.required = false;
+    customLimit.value = '';
+  }
+}
+
+// Simple HTML Escaper
+function escapeHtml(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/* ----------------------------------------------------
+ * SHORTENER API ACTIONS
+ * ---------------------------------------------------- */
+
 // Handle shortening form submission
 async function handleShorten(e) {
   e.preventDefault();
   
   const longUrlInput = document.getElementById('longUrl');
   const customCodeInput = document.getElementById('customCode');
+  const viewLimitSelect = document.getElementById('viewLimit');
+  const customLimitInput = document.getElementById('customLimit');
   const btnSubmit = document.getElementById('btnSubmit');
   const btnText = btnSubmit.querySelector('.btn-text');
   const btnLoader = btnSubmit.querySelector('.btn-loader');
   
   const longUrl = longUrlInput.value.trim();
   const customCode = customCodeInput.value.trim();
+  
+  let viewLimit = null;
+  if (viewLimitSelect.value === 'custom') {
+    viewLimit = parseInt(customLimitInput.value.trim(), 10) || null;
+  } else if (viewLimitSelect.value) {
+    viewLimit = parseInt(viewLimitSelect.value, 10);
+  }
   
   // Set loading state
   btnSubmit.disabled = true;
@@ -114,7 +155,11 @@ async function handleShorten(e) {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ url: longUrl, customCode: customCode || undefined })
+      body: JSON.stringify({ 
+        url: longUrl, 
+        customCode: customCode || undefined,
+        viewLimit: viewLimit
+      })
     });
     
     const result = await response.json();
@@ -133,26 +178,31 @@ async function handleShorten(e) {
     resultCard.classList.remove('hidden');
     resultCard.scrollIntoView({ behavior: 'smooth' });
     
-    showToast('短链接生成成功！', 'success');
+    showToast('短链接/分享生成成功！', 'success');
     
     // Save to local history
     addToHistory({
       code: result.code,
+      type: result.type,
       url: longUrl,
       shortUrl: result.shortUrl,
       createdAt: result.createdAt,
-      clicks: 0
+      clicks: 0,
+      viewLimit: result.viewLimit
     });
     
     // Clear form
+    longUrlInput.value = '';
     customCodeInput.value = '';
+    viewLimitSelect.value = '';
+    toggleCustomLimit();
     
   } catch (err) {
     showToast(err.message, 'error');
   } finally {
     // Reset button state
     btnSubmit.disabled = false;
-    btnText.textContent = '缩短链接';
+    btnText.textContent = '生成短链接/分享';
     btnLoader.classList.add('hidden');
   }
 }
@@ -178,11 +228,9 @@ function initHistory() {
 }
 
 function addToHistory(item) {
-  // Prevent duplicate entries
   localHistory = localHistory.filter(h => h.code !== item.code);
   localHistory.unshift(item); // Add to top
   
-  // Cap history size to 30 items
   if (localHistory.length > 30) {
     localHistory.pop();
   }
@@ -204,7 +252,7 @@ function renderHistory() {
   if (localHistory.length === 0) {
     historyList.innerHTML = `
       <tr class="empty-row">
-        <td colspan="5">暂无生成记录，立即在上方创建一个吧！</td>
+        <td colspan="7">暂无生成记录，立即在上方创建一个吧！</td>
       </tr>
     `;
     return;
@@ -222,10 +270,40 @@ function renderHistory() {
       dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     }
     
+    // Determine type display
+    const typeLabel = item.type === 'text' 
+      ? '<span class="type-badge text-note" style="background: rgba(190, 100, 50, 0.08); color: var(--accent-color); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; border: 1px solid rgba(190, 100, 50, 0.2);">📝 文字</span>' 
+      : '<span class="type-badge text-url" style="background: rgba(145, 80, 46, 0.08); color: var(--success-color); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; border: 1px solid rgba(145, 80, 46, 0.2);">🔗 链接</span>';
+      
+    // Determine preview content
+    const displayContent = item.type === 'text'
+      ? `<span class="text-note-preview" style="color: var(--text-secondary); font-style: italic; font-family: var(--font-mono); font-size: 0.85rem;">${escapeHtml(item.url)}</span>`
+      : `<a href="${item.url}" target="_blank" class="link-url">${item.url}</a>`;
+
+    // Determine status & clicks
+    const clicks = item.clicks || 0;
+    const viewLimit = item.viewLimit;
+    const isDestroyed = viewLimit && (clicks >= viewLimit);
+    
+    let statusLabel = '';
+    if (isDestroyed) {
+      statusLabel = '<span class="status-badge" style="background: rgba(255, 69, 58, 0.1); color: var(--danger-color); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; border: 1px solid rgba(255, 69, 58, 0.2);">已销毁</span>';
+    } else if (clicks > 0) {
+      statusLabel = '<span class="status-badge" style="background: rgba(50, 215, 75, 0.1); color: var(--success-color); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; border: 1px solid rgba(50, 215, 75, 0.2);">已查看</span>';
+    } else {
+      statusLabel = '<span class="status-badge" style="background: rgba(255, 255, 255, 0.05); color: var(--text-muted); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; border: 1px solid var(--border-color);">未查看</span>';
+    }
+
+    const limitLabel = viewLimit 
+      ? `<span class="limit-badge" style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-secondary);">${clicks} / ${viewLimit}</span>`
+      : '<span class="limit-badge" style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted);">无限制</span>';
+    
     row.innerHTML = `
       <td><a href="${item.shortUrl}" target="_blank" class="link-code">/${item.code}</a></td>
-      <td title="${item.url}"><a href="${item.url}" target="_blank" class="link-url">${item.url}</a></td>
-      <td><span class="clicks-badge" id="clicks-${item.code}">${item.clicks || 0}</span></td>
+      <td>${typeLabel}</td>
+      <td title="${item.url}">${displayContent}</td>
+      <td>${statusLabel}</td>
+      <td>${limitLabel}</td>
       <td><span class="date-text">${dateStr}</span></td>
       <td>
         <div class="row-actions">
@@ -249,18 +327,16 @@ async function refreshHistoryStats() {
     localHistory.map(async (item) => {
       try {
         const response = await fetch(`/api/stats?code=${item.code}`);
-        if (response.ok) {
+        if (response.status === 404) {
+          // If response is 404, the link was deleted (likely because it reached viewLimit)
+          if (item.viewLimit && item.clicks !== item.viewLimit) {
+            item.clicks = item.viewLimit; // Force to limit to render "已销毁"
+            updated = true;
+          }
+        } else if (response.ok) {
           const data = await response.json();
           if (data.clicks !== undefined && data.clicks !== item.clicks) {
             item.clicks = data.clicks;
-            
-            // Update cell directly for instant UI feedback
-            const cell = document.getElementById(`clicks-${item.code}`);
-            if (cell) {
-              cell.textContent = data.clicks;
-              cell.classList.add('animate-pulse');
-              setTimeout(() => cell.classList.remove('animate-pulse'), 1000);
-            }
             updated = true;
           }
         }
@@ -272,6 +348,7 @@ async function refreshHistoryStats() {
   
   if (updated) {
     localStorage.setItem('edgelink_history', JSON.stringify(localHistory));
+    renderHistory();
   }
 }
 

@@ -933,3 +933,65 @@ tbody tr:hover {
     padding: 20px;
   }
 }
+
+/* Additional styles for Text Note Sharing & View Limits */
+.input-wrapper textarea {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 14px 16px 14px 46px;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  transition: var(--transition-fast);
+  resize: vertical;
+  min-height: 100px;
+}
+.input-wrapper textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: var(--glow-shadow);
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.input-wrapper select.custom-select {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.25) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") no-repeat right 16px center;
+  background-size: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 14px 40px 14px 46px;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  transition: var(--transition-fast);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+.input-wrapper select.custom-select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: var(--glow-shadow);
+  background-color: rgba(0, 0, 0, 0.35);
+}
+.input-wrapper select.custom-select option {
+  background-color: hsl(224, 25%, 12%);
+  color: var(--text-primary);
+}
+
+.admin-note-preview:hover {
+  color: var(--accent-color) !important;
+  text-decoration: underline;
+}
+
+/* Styling checkbox alignments in tables */
+#adminTable td input[type="checkbox"],
+#adminTable th input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary-color);
+  cursor: pointer;
+  vertical-align: middle;
+}

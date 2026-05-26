@@ -94,12 +94,15 @@
               <p>已保存在 EdgeOne KV 存储空间的所有短链列表。</p>
             </div>
             <div class="header-actions">
-              <input type="text" id="adminSearchInput" oninput="filterAdminLinks()" placeholder="搜索短地址/原始地址..." class="search-input">
-              <button onclick="fetchAdminLinks()" class="btn btn-secondary">
-                🔄 刷新列表
+              <input type="text" id="adminSearchInput" oninput="filterAdminLinks()" placeholder="搜索短地址/内容..." class="search-input">
+              <button id="btnBulkDelete" onclick="handleBulkDelete()" class="btn btn-danger hidden" style="padding: 8px 16px; font-size: 0.9rem; width: auto;">
+                🗑️ 批量删除 (<span id="selectedCount">0</span>)
               </button>
-              <button onclick="handleAdminLogout()" class="btn btn-danger">
-                🚪 退出登录
+              <button onclick="fetchAdminLinks()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.9rem; width: auto;">
+                🔄 刷新
+              </button>
+              <button onclick="handleAdminLogout()" class="btn btn-danger" style="padding: 8px 16px; font-size: 0.9rem; width: auto;">
+                🚪 退出
               </button>
             </div>
           </div>
@@ -108,16 +111,19 @@
             <table id="adminTable">
               <thead>
                 <tr>
+                  <th style="width: 40px; text-align: center;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)" style="cursor: pointer;"></th>
                   <th>短地址</th>
-                  <th>原始地址</th>
-                  <th>点击数</th>
+                  <th>类型</th>
+                  <th>内容/原始链接</th>
+                  <th>状态 (点击)</th>
+                  <th>次数限制</th>
                   <th>创建时间</th>
                   <th>操作</th>
                 </tr>
               </thead>
               <tbody id="adminLinksList">
                 <tr class="empty-row">
-                  <td colspan="5">正在加载 KV 数据...</td>
+                  <td colspan="8">正在加载 KV 数据...</td>
                 </tr>
               </tbody>
             </table>
@@ -143,6 +149,25 @@
         <div class="modal-footer">
           <button id="btnDownloadQR" class="btn btn-secondary">下载二维码</button>
           <button onclick="closeQRModal()" class="btn btn-primary">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Text Preview Modal (Hidden by default) -->
+    <div id="previewModal" class="modal hidden">
+      <div class="modal-overlay" onclick="closePreviewModal()"></div>
+      <div class="modal-content glass" style="max-width: 600px; text-align: left;">
+        <div class="modal-header">
+          <h3>文字内容预览</h3>
+          <button class="close-btn" onclick="closePreviewModal()">&times;</button>
+        </div>
+        <div class="modal-body" style="align-items: stretch;">
+          <div class="badge badge-info" id="previewBadge" style="margin-bottom: 12px; display: inline-flex; width: fit-content; border: 1px solid rgba(190, 100, 50, 0.2); background: rgba(190, 100, 50, 0.08); color: var(--accent-color); padding: 4px 10px; border-radius: 4px; font-size: 0.8rem;"></div>
+          <pre id="previewTextContent" style="background: rgba(0, 0, 0, 0.3); padding: 15px; border-radius: var(--radius-md); border: 1px solid var(--border-color); font-family: var(--font-mono); font-size: 0.9rem; color: var(--text-primary); white-space: pre-wrap; word-break: break-all; max-height: 350px; overflow-y: auto;"></pre>
+        </div>
+        <div class="modal-footer">
+          <button onclick="copyPreviewText()" class="btn btn-primary" style="flex: 1;">复制文本</button>
+          <button onclick="closePreviewModal()" class="btn btn-secondary" style="flex: 1;">关闭</button>
         </div>
       </div>
     </div>

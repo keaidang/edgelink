@@ -15,19 +15,23 @@ app.use(express.text());
 // Initialize local mock KV storage
 globalThis.__mockKV = new Map();
 
-// Pre-populate with a sample link for instant local validation
+// Pre-populate with sample records for instant local validation
 globalThis.__mockKV.set('link:google', JSON.stringify({
+  type: 'url',
   code: 'google',
   url: 'https://www.google.com',
   createdAt: new Date().toISOString(),
   clicks: 12,
+  viewLimit: null,
   customCode: true
 }));
-globalThis.__mockKV.set('link:edge', JSON.stringify({
-  code: 'edge',
-  url: 'https://edgeone.ai',
+globalThis.__mockKV.set('link:note', JSON.stringify({
+  type: 'text',
+  code: 'note',
+  text: 'Hello from EdgeLink! This is a secure text share note with a view count limit of 5.',
   createdAt: new Date().toISOString(),
-  clicks: 8,
+  clicks: 0,
+  viewLimit: 5,
   customCode: true
 }));
 

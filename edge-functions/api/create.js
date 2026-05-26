@@ -100,23 +100,30 @@ export default async function onRequest(context) {
 
   try {
     const body = await request.json();
-    let { url, customCode } = body;
+    let { url, customCode, viewLimit } = body;
 
-    // 1. Validate long URL
+    // 1. Validate input
     if (!url) {
-      return new Response(JSON.stringify({ error: 'URL is required.' }), {
+      return new Response(JSON.stringify({ error: 'URL or text is required.' }), {
         status: 400,
         headers: corsHeaders()
       });
     }
 
-    // Basic URL format validation
-    url = url.trim();
-    if (!/^https?:\/\/\S+$/i.test(url)) {
-      return new Response(JSON.stringify({ error: 'Invalid URL format. Must start with http:// or https://' }), {
-        status: 400,
-        headers: corsHeaders()
-      });
+    // Input detection: is it a web link or text?
+    const trimmedInput = url.trim();
+    const isUrl = /^https?:\/\/\S+$/i.test(trimmedInput);
+    const type = isUrl ? 'url' : 'text';
+    const finalUrl = isUrl ? trimmedInput : '';
+    const finalText = isUrl ? '' : trimmedInput;
+
+    // Parse view count limit
+    let limit = null;
+    if (viewLimit !== undefined && viewLimit !== null && viewLimit !== '') {
+      const parsedLimit = parseInt(viewLimit, 10);
+      if (!isNaN(parsedLimit) && parsedLimit > 0) {
+        limit = parsedLimit;
+      }
     }
 
     const kv = getKV(context);
@@ -168,10 +175,13 @@ export default async function onRequest(context) {
     // Save to KV
     const createdAt = new Date().toISOString();
     const linkData = {
-      url,
+      type,
+      url: finalUrl,
+      text: finalText,
       code: shortCode,
       createdAt,
       clicks: 0,
+      viewLimit: limit,
       customCode: !!customCode
     };
 
@@ -184,9 +194,11 @@ export default async function onRequest(context) {
     return new Response(JSON.stringify({
       success: true,
       code: shortCode,
-      url,
+      type,
+      url: isUrl ? finalUrl : (finalText.length > 60 ? finalText.substring(0, 60) + '...' : finalText),
       shortUrl,
-      createdAt
+      createdAt,
+      viewLimit: limit
     }), {
       status: 200,
       headers: corsHeaders()

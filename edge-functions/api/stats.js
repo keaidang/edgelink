@@ -114,6 +114,7 @@ export default async function onRequest(context) {
       linkData = typeof linkJson === 'string' ? JSON.parse(linkJson) : linkJson;
     } catch (e) {
       linkData = {
+        type: 'url',
         url: linkJson,
         code,
         createdAt: new Date().toISOString(),
@@ -121,12 +122,14 @@ export default async function onRequest(context) {
       };
     }
 
-    // Return URL and clicks only (security safe)
+    // Return type, clicks, and viewLimit (security safe, hides full text note contents)
     return new Response(JSON.stringify({
       success: true,
       code: linkData.code,
-      url: linkData.url,
+      type: linkData.type || 'url',
+      url: linkData.type === 'text' ? '' : linkData.url,
       clicks: linkData.clicks || 0,
+      viewLimit: linkData.viewLimit || null,
       createdAt: linkData.createdAt
     }), {
       status: 200,

@@ -131,46 +131,62 @@ export default async function onRequest(context) {
   }
 
   try {
-    let code = '';
+    const kv = getKV(context);
+    let codes = [];
     
     // Check search parameter first: e.g. /api/admin/delete?code=abc
     const urlObj = new URL(request.url);
-    code = urlObj.searchParams.get('code') || '';
+    const singleCode = urlObj.searchParams.get('code');
+    if (singleCode) {
+      codes.push(singleCode);
+    }
 
-    // If not in search parameters, try to parse JSON body
-    if (!code) {
+    // Try to parse JSON body
+    if (codes.length === 0) {
       try {
         const body = await request.clone().json();
-        code = body.code || '';
+        if (body.codes && Array.isArray(body.codes)) {
+          codes = body.codes;
+        } else if (body.code) {
+          codes.push(body.code);
+        }
       } catch (e) {
         // Body reading failed (e.g. empty request)
       }
     }
 
-    if (!code) {
-      return new Response(JSON.stringify({ error: 'Missing code parameter. Provide query parameter (?code=xxx) or JSON payload.' }), {
+    if (codes.length === 0) {
+      return new Response(JSON.stringify({ error: 'Missing code or codes parameter.' }), {
         status: 400,
         headers: corsHeaders()
       });
     }
 
-    const kv = getKV(context);
-    
-    // 2. Check if key exists
-    const existing = await kv.get(`link:${code}`);
-    if (!existing) {
-      return new Response(JSON.stringify({ error: `Short link /${code} does not exist.` }), {
-        status: 404,
-        headers: corsHeaders()
-      });
-    }
+    // 2. Perform deletions
+    const deletedList = [];
+    const failedList = [];
 
-    // 3. Delete key from KV
-    await kv.delete(`link:${code}`);
+    await Promise.all(
+      codes.map(async (code) => {
+        try {
+          const existing = await kv.get(`link:${code}`);
+          if (existing) {
+            await kv.delete(`link:${code}`);
+            deletedList.push(code);
+          } else {
+            failedList.push(code);
+          }
+        } catch (err) {
+          failedList.push(code);
+        }
+      })
+    );
 
     return new Response(JSON.stringify({
       success: true,
-      message: `Short link /${code} has been successfully deleted.`
+      message: `Successfully processed bulk deletion.`,
+      deleted: deletedList,
+      failed: failedList
     }), {
       status: 200,
       headers: corsHeaders()

@@ -28,7 +28,7 @@
         <span class="logo-icon">⚡</span>
         <h1 class="logo-text">Edge<span>Link</span></h1>
       </div>
-      <p class="tagline">基于腾讯云 EdgeOne Pages 部署的极速短链接平台</p>
+      <p class="tagline">基于腾讯 EdgeOne Pages 部署的极速短链接平台</p>
       
       <!-- System status -->
       <div class="status-indicator">
@@ -56,10 +56,10 @@
           
           <form id="shortenForm" onsubmit="handleShorten(event)">
             <div class="form-group">
-              <label for="longUrl">长链接 URL <span class="required">*</span></label>
+              <label for="longUrl">长链接 URL 或文字内容 <span class="required">*</span></label>
               <div class="input-wrapper">
-                <span class="input-icon">🌐</span>
-                <input type="url" id="longUrl" placeholder="https://example.com/very/long/path/to/page" required>
+                <span class="input-icon" style="top: 14px; align-self: flex-start;">🌐</span>
+                <textarea id="longUrl" placeholder="输入 https://... 网址进行缩短，或直接输入文字内容进行阅后即焚文字分享..." required style="height: 100px; resize: vertical; padding-top: 14px;"></textarea>
               </div>
             </div>
             
@@ -71,9 +71,31 @@
               </div>
               <small class="helper-text">仅支持 3-20 位字母、数字、短横线 (-) 和下划线 (_)。</small>
             </div>
+
+            <div class="form-group">
+              <label for="viewLimit">查看次数限制（可选）</label>
+              <div class="input-wrapper">
+                <span class="input-icon">👁️</span>
+                <select id="viewLimit" class="custom-select" onchange="toggleCustomLimit()">
+                  <option value="">无限制 (Unlimited)</option>
+                  <option value="1">1次 (阅后即焚 - Burn after reading)</option>
+                  <option value="5">5次</option>
+                  <option value="10">10次</option>
+                  <option value="custom">自定义次数...</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="customLimitGroup" class="form-group hidden">
+              <label for="customLimit">输入自定义次数 <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <span class="input-icon">🔢</span>
+                <input type="number" id="customLimit" min="1" placeholder="输入允许查看的最高次数">
+              </div>
+            </div>
             
             <button type="submit" id="btnSubmit" class="btn btn-primary btn-glow">
-              <span class="btn-text">缩短链接</span>
+              <span class="btn-text">生成短链接/分享</span>
               <span class="btn-loader hidden"></span>
             </button>
           </form>
@@ -85,13 +107,13 @@
           <div class="card-header">
             <div class="success-header">
               <span class="success-badge-icon">✓</span>
-              <h3>短链接已生成！</h3>
+              <h3>链接/内容分享已生成！</h3>
             </div>
           </div>
           
           <div class="result-box">
             <div class="result-field">
-              <label>生成的短链接</label>
+              <label>生成的短网址</label>
               <div class="copy-input-group">
                 <input type="text" id="shortUrlOutput" readonly>
                 <button onclick="copyToClipboard('shortUrlOutput')" class="btn btn-secondary" title="复制短链接">
@@ -124,15 +146,17 @@
               <thead>
                 <tr>
                   <th>短地址</th>
-                  <th>原始地址</th>
-                  <th>点击次数</th>
+                  <th>类型</th>
+                  <th>原始地址/内容</th>
+                  <th>状态 (点击)</th>
+                  <th>次数限制</th>
                   <th>创建时间</th>
                   <th>操作</th>
                 </tr>
               </thead>
               <tbody id="historyList">
                 <tr class="empty-row">
-                  <td colspan="5">暂无生成记录，立即在上方创建一个吧！</td>
+                  <td colspan="7">暂无生成记录，立即在上方创建一个吧！</td>
                 </tr>
               </tbody>
             </table>
