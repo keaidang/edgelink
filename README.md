@@ -1,10 +1,13 @@
 # ⚡ EdgeLink - 极速边缘短链接服务
 
-EdgeLink 是一款基于 **腾讯云 EdgeOne Pages** 的轻量、极速、开箱即用的 Serverless 网址短链接生成与重定向服务。
+EdgeLink 是一款基于 **腾讯云 EdgeOne Pages** 的轻量、极速、无服务器、开箱即用的 Serverless 网址短链接生成与重定向服务。
 
 项目使用 **Edge Functions (边缘函数)** 处理重定向与 API 请求，利用 **EdgeOne KV** 作为低延迟全球分布式存储，并提供了一个高颜值、现代科技感（暗黑玻璃拟态）的控制台面板。
 
 ---
+## 🧷在线体验
+
+点击链接即可体验本项目https://link.9o.pw
 
 ## 🚀 一键部署
 
