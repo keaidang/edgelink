@@ -248,6 +248,98 @@ function htmlPage(title, bodyContent, style = '') {
 </html>`;
 }
 
+function redirectHtmlPage(url) {
+  return htmlPage(
+    '安全跳转中',
+    `<div class="card" style="text-align: center; max-width: 500px;">
+      <a href="/" class="logo" style="justify-content: center;">⚡ Edge<span>Link</span></a>
+      <div id="loadingState">
+        <div class="spinner"></div>
+        <h2 style="font-weight: 700; margin-bottom: 8px;">正在跳转...</h2>
+        <p style="font-size: 0.9rem; color: var(--text-secondary);">正在安全检测并跳转至目标网页</p>
+        <div class="url-text">${escapeHtml(url)}</div>
+      </div>
+      <div id="errorState" class="hidden">
+        <div style="font-size: 3rem; margin-bottom: 16px;">⚠️</div>
+        <h2 style="color: var(--danger-color); font-weight: 800; margin-bottom: 12px;">目标网址暂时无法连接</h2>
+        <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 12px;">我们尝试连接目标网址，但连接超时或失败。该网页可能已失效、关闭或存在网络故障。</p>
+        <div class="url-text" style="background: rgba(255, 69, 58, 0.04); border-color: rgba(255, 69, 58, 0.15); color: var(--text-primary);">${escapeHtml(url)}</div>
+        <div class="actions" style="margin-top: 24px; display: flex; gap: 12px;">
+          <a href="${url}" class="btn btn-primary">强制继续访问</a>
+          <a href="/" class="btn btn-secondary">返回首页</a>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function() {
+        const targetUrl = ${JSON.stringify(url)};
+        let resolved = false;
+
+        function doRedirect() {
+          if (resolved) return;
+          resolved = true;
+          window.location.replace(targetUrl);
+        }
+
+        function showError() {
+          if (resolved) return;
+          resolved = true;
+          document.getElementById('loadingState').classList.add('hidden');
+          document.getElementById('errorState').classList.remove('hidden');
+        }
+
+        // Set a timeout for the connectivity check (2.5 seconds)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          controller.abort();
+          showError();
+        }, 2500);
+
+        // Try fetching the target URL
+        fetch(targetUrl, { mode: 'no-cors', signal: controller.signal })
+          .then(() => {
+            clearTimeout(timeoutId);
+            doRedirect();
+          })
+          .catch((err) => {
+            clearTimeout(timeoutId);
+            if (err.name === 'AbortError') return;
+            showError();
+          });
+      })();
+    </script>`,
+    `
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid rgba(255, 255, 255, 0.08);
+      border-radius: 50%;
+      border-top-color: var(--primary-color);
+      animation: spin 1s ease-in-out infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .url-text {
+      background: rgba(0, 0, 0, 0.15);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      word-break: break-all;
+      margin: 16px 0;
+      text-align: left;
+    }
+    .hidden {
+      display: none !important;
+    }
+    `
+  );
+}
+
 export default async function onRequest(context) {
   const { request, params } = context;
   const code = params.code;
@@ -315,6 +407,22 @@ export default async function onRequest(context) {
 
     const clicks = linkData.clicks || 0;
     const viewLimit = linkData.viewLimit;
+
+    // Cookie-based check to prevent viewing again on refresh for text shares
+    const isText = linkData.type === 'text';
+    if (isText && viewLimit) {
+      const cookieHeader = request.headers.get('cookie') || request.headers.get('Cookie') || '';
+      if (cookieHeader.includes(`viewed_${code}=true`)) {
+        return new Response(unavailableHtml, {
+          status: 404,
+          headers: {
+            'Content-Type': 'text/html; charset=UTF-8',
+            'Cache-Control': 'no-store, no-cache, must-revalidate'
+          }
+        });
+      }
+    }
+
     const nextClicks = clicks + 1;
     const isLastView = viewLimit && (nextClicks >= viewLimit);
 
@@ -339,14 +447,14 @@ export default async function onRequest(context) {
 
     // Handle URL Redirection
     if (!linkData.type || linkData.type === 'url') {
-      return new Response(null, {
-        status: 302,
+      const redirectHtml = redirectHtmlPage(linkData.url);
+      return new Response(redirectHtml, {
+        status: 200,
         headers: {
-          'Location': linkData.url,
+          'Content-Type': 'text/html; charset=UTF-8',
           'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
           'Pragma': 'no-cache',
-          'Expires': '0',
-          'Access-Control-Allow-Origin': '*'
+          'Expires': '0'
         }
       });
     }
@@ -354,13 +462,10 @@ export default async function onRequest(context) {
     // Handle Text Sharing Render
     let badgeHtml = '';
     if (viewLimit) {
-      if (isLastView) {
-        badgeHtml = `<span class="badge badge-danger">🚨 最后一次查看 | 此内容已被销毁</span>`;
-      } else {
-        badgeHtml = `<span class="badge badge-info">⚠️ 阅后即焚限制 | 剩余查看次数: ${viewLimit - nextClicks}</span>`;
-      }
+      // Do not prompt user about limits to prevent screenshots
+      badgeHtml = `<span class="badge badge-success">📝 文字分享</span>`;
     } else {
-      badgeHtml = `<span class="badge badge-success">📝 文字分享 | 累计查看次数: ${nextClicks}</span>`;
+      badgeHtml = `<span class="badge badge-success">📝 文字分享 | 累计查看次数: ${nextClicks} / 无限制</span>`;
     }
 
     const textSharingHtml = htmlPage(
@@ -374,15 +479,41 @@ export default async function onRequest(context) {
           <button class="btn btn-primary" onclick="copyText(document.getElementById('noteContent').textContent)">复制文字内容</button>
           <a href="/" class="btn btn-secondary">创建我的分享</a>
         </div>
-      </div>`
+      </div>
+      ${viewLimit ? `
+      <script>
+        (function() {
+          const key = 'viewed_' + ${JSON.stringify(code)};
+          if (sessionStorage.getItem(key)) {
+            document.body.innerHTML = \`<div class="bg-glow"></div>
+            <div class="card" style="text-align: center;">
+              <a href="/" class="logo" style="justify-content: center;">⚡ Edge<span>Link</span></a>
+              <div style="font-size: 3.5rem; margin-bottom: 16px;">📭</div>
+              <h2 style="color: var(--danger-color); font-weight: 800;">内容不可用</h2>
+              <p>此链接已失效、被删除，或已安全销毁。</p>
+              <a href="/" class="btn btn-secondary">返回首页</a>
+            </div>\`;
+          } else {
+            sessionStorage.setItem(key, 'true');
+          }
+        })();
+      </script>
+      ` : ''}`
     );
+
+    const responseHeaders = {
+      'Content-Type': 'text/html; charset=UTF-8',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    };
+    if (viewLimit) {
+      responseHeaders['Set-Cookie'] = `viewed_${code}=true; Path=/; Max-Age=3600; HttpOnly; SameSite=Lax`;
+    }
 
     return new Response(textSharingHtml, {
       status: 200,
-      headers: {
-        'Content-Type': 'text/html; charset=UTF-8',
-        'Cache-Control': 'no-store'
-      }
+      headers: responseHeaders
     });
 
   } catch (err) {

@@ -296,7 +296,7 @@ function renderHistory() {
 
     const limitLabel = viewLimit 
       ? `<span class="limit-badge" style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-secondary);">${clicks} / ${viewLimit}</span>`
-      : '<span class="limit-badge" style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted);">无限制</span>';
+      : `<span class="limit-badge" style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-secondary);">${clicks} / 无限制</span>`;
     
     row.innerHTML = `
       <td><a href="${item.shortUrl}" target="_blank" class="link-code">/${item.code}</a></td>

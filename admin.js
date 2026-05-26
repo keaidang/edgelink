@@ -219,7 +219,7 @@ function previewTextNote(code) {
     previewBadge.style.color = isDestroyed ? 'var(--danger-color)' : 'var(--accent-color)';
     previewBadge.style.borderColor = isDestroyed ? 'rgba(255, 69, 58, 0.2)' : 'rgba(190, 100, 50, 0.2)';
   } else {
-    previewBadge.textContent = `📝 文字分享 (累计被查看: ${clicks}次)`;
+    previewBadge.textContent = `📝 文字分享 (累计被查看: ${clicks} / 无限制)`;
     previewBadge.style.background = 'rgba(50, 215, 75, 0.1)';
     previewBadge.style.color = 'var(--success-color)';
     previewBadge.style.borderColor = 'rgba(50, 215, 75, 0.2)';
@@ -320,7 +320,7 @@ function renderAdminLinks(filterQuery = '') {
 
     const limitLabel = viewLimit 
       ? `<span style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">${clicks} / ${viewLimit}</span>`
-      : '<span style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted);">无限制</span>';
+      : `<span style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">${clicks} / 无限制</span>`;
     
     row.innerHTML = `
       <td style="text-align: center;"><input type="checkbox" class="link-checkbox" value="${item.code}" onchange="updateSelectedCount()" style="cursor: pointer;"></td>
