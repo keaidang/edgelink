@@ -46,7 +46,7 @@ function copyText(text) {
   tempInput.value = text;
   document.body.appendChild(tempInput);
   tempInput.select();
-  try { document.execCommand('copy'); showToast('Copied!', 'success'); } catch (e) { showToast('Copy failed', 'error'); }
+  try { document.execCommand('copy'); showToast('复制成功！', 'success'); } catch (e) { showToast('复制失败', 'error'); }
   document.body.removeChild(tempInput);
 }
 
@@ -87,7 +87,7 @@ async function attemptAdminLogin(token) {
     updateTotalClicks();
     renderAdminLinks();
     loadTrendChart();
-    showToast('Admin verified', 'success');
+    showToast('管理员验证成功', 'success');
 
   } catch (err) {
     showToast(err.message, 'error');
@@ -105,21 +105,21 @@ function handleAdminLogout() {
   document.getElementById('adminToken').value = '';
   document.getElementById('adminConsole').classList.add('hidden');
   document.getElementById('adminAuthCard').classList.remove('hidden');
-  showToast('Logged out', 'info');
+  showToast('已退出登录', 'info');
 }
 
 async function loadMoreLinks() {
   if (!adminCursor || !activeAdminToken) return;
   const btn = document.getElementById('btnLoadMore');
   btn.disabled = true;
-  btn.textContent = 'Loading...';
+  btn.textContent = '加载中...';
 
   try {
     const response = await fetch(`/api/admin/list?limit=50&cursor=${encodeURIComponent(adminCursor)}`, {
       headers: { 'Authorization': `Bearer ${activeAdminToken}` }
     });
     const result = await response.json();
-    if (!response.ok) throw new Error(result.error || 'Failed to load more');
+    if (!response.ok) throw new Error(result.error || '加载失败');
 
     const newLinks = result.links || [];
     const existingCodes = new Set(adminLinks.map(l => l.code));
