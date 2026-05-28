@@ -317,19 +317,6 @@ function renderHistory() {
       ? `<span class="limit-badge" style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-secondary);">${clicks} / ${viewLimit}</span>`
       : `<span class="limit-badge" style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-secondary);">${clicks} / 无限制</span>`;
 
-    const expiresAt = item.expiresAt;
-    let expiresLabel = '';
-    if (expiresAt) {
-      const expires = new Date(expiresAt);
-      const now = new Date();
-      if (expires <= now) {
-        expiresLabel = '<span class="status-badge" style="background: rgba(255, 69, 58, 0.1); color: var(--danger-color); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; border: 1px solid rgba(255, 69, 58, 0.2);">已过期</span>';
-      } else {
-        const daysLeft = Math.ceil((expires - now) / 86400000);
-        expiresLabel = `<span class="status-badge" style="background: rgba(190, 100, 50, 0.08); color: var(--accent-color); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; border: 1px solid rgba(190, 100, 50, 0.2);">${daysLeft}天后过期</span>`;
-      }
-    }
-    
     row.innerHTML = `
       <td><a href="${item.shortUrl}" target="_blank" class="link-code">/${item.code}</a></td>
       <td>${typeLabel}</td>

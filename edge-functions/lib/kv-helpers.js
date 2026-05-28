@@ -145,3 +145,5 @@ async function checkRateLimit(kv, key, maxRequests, windowMs) {
     resetAt: record.resetAt
   };
 }
+
+export { getKV, corsHeaders, corsHeadersPublic, escapeHtml, verifyAdminAuth, checkRateLimit };
