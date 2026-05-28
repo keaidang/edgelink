@@ -124,22 +124,11 @@ async function loadMoreLinks() {
     const newLinks = result.links || [];
     const existingCodes = new Set(adminLinks.map(l => l.code));
     for (const link of newLinks) {
-      if (!existingCodes.has(link.code)) {
-        adminLinks.push(link.code);
+      if (link && !existingCodes.has(link.code)) {
         adminLinks.push(link);
+        existingCodes.add(link.code);
       }
     }
-    adminLinks = adminLinks.filter((item, idx) => {
-      if (idx < adminLinks.length && adminLinks[idx] && adminLinks[idx].code === item.code) return true;
-      return false;
-    });
-
-    const codeSet = new Set();
-    adminLinks = adminLinks.filter(item => {
-      if (codeSet.has(item.code)) return false;
-      codeSet.add(item.code);
-      return true;
-    });
 
     adminCursor = result.cursor || null;
     document.getElementById('statTotalLinks').textContent = result.total || adminLinks.length;
@@ -153,7 +142,7 @@ async function loadMoreLinks() {
     showToast(err.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Load More...';
+    btn.textContent = '加载更多...';
   }
 }
 
@@ -175,7 +164,7 @@ async function fetchAdminLinks() {
     renderAdminLinks();
     loadTrendChart();
     document.getElementById('loadMoreContainer').classList.toggle('hidden', !adminCursor);
-    showToast('Refreshed', 'success');
+    showToast('刷新成功', 'success');
   } catch (err) {
     showToast(err.message, 'error');
     if (err.message.includes('Unauthorized') || err.message.includes('Token')) handleAdminLogout();
@@ -202,7 +191,7 @@ async function handleBulkDelete() {
   const checked = document.querySelectorAll('.link-checkbox:checked');
   const codes = Array.from(checked).map(cb => cb.value);
   if (codes.length === 0) return;
-  if (!confirm(`Delete ${codes.length} links permanently?`)) return;
+  if (!confirm(`确定永久删除选中的 ${codes.length} 个链接？`)) return;
 
   try {
     const response = await fetch('/api/admin/delete', {
@@ -212,7 +201,7 @@ async function handleBulkDelete() {
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || 'Bulk delete failed');
-    showToast(`Deleted ${result.deleted.length} links!`, 'success');
+    showToast(`已删除 ${result.deleted.length} 个链接`, 'success');
     adminLinks = adminLinks.filter(item => !result.deleted.includes(item.code));
     renderAdminLinks(adminFilterQuery);
     document.getElementById('statTotalLinks').textContent = adminLinks.length;
@@ -313,16 +302,16 @@ function renderAdminLinks(filterQuery = '') {
       <td style="text-align:center;"><input type="checkbox" class="link-checkbox" value="${item.code}" onchange="updateSelectedCount()" style="cursor:pointer;"></td>
       <td><a href="${shortUrl}" target="_blank" class="link-code">/${item.code}</a></td>
       <td>${typeLabel}</td>
-      <td title="${item.url || 'Click to preview'}">${displayContent}</td>
+      <td title="${item.url || '点击查看'}">${displayContent}</td>
       <td>${statusLabel} <span class="clicks-badge" style="padding:1px 6px;font-size:0.75rem;">${clicks}x</span></td>
       <td>${limitLabel}</td>
       <td><span class="date-text">${dateStr}</span></td>
       <td>
         <div class="row-actions">
-          ${item.type === 'text' ? `<button onclick="previewTextNote('${item.code}')" class="btn btn-secondary btn-small" title="Preview">View</button>` : ''}
-          <button onclick="copyText('${shortUrl}')" class="btn btn-secondary btn-small">Copy</button>
-          <button onclick="showQRCode('${shortUrl}','${item.code}')" class="btn btn-secondary btn-small">QR</button>
-          <button onclick="deleteLink('${item.code}')" class="btn btn-danger btn-small">Del</button>
+          ${item.type === 'text' ? `<button onclick="previewTextNote('${item.code}')" class="btn btn-secondary btn-small" title="预览">查看</button>` : ''}
+          <button onclick="copyText('${shortUrl}')" class="btn btn-secondary btn-small">复制</button>
+          <button onclick="showQRCode('${shortUrl}','${item.code}')" class="btn btn-secondary btn-small">二维码</button>
+          <button onclick="deleteLink('${item.code}')" class="btn btn-danger btn-small">删除</button>
         </div>
       </td>`;
     listBody.appendChild(row);
@@ -336,7 +325,7 @@ function filterAdminLinks() {
 }
 
 async function deleteLink(code) {
-  if (!confirm(`Delete /${code} permanently?`)) return;
+  if (!confirm(`确定永久删除 /${code}？`)) return;
   try {
     const response = await fetch('/api/admin/delete', {
       method: 'DELETE',
@@ -344,8 +333,8 @@ async function deleteLink(code) {
       body: JSON.stringify({ code })
     });
     const result = await response.json();
-    if (!response.ok) throw new Error(result.error || 'Delete failed');
-    showToast(`/${code} deleted!`, 'success');
+    if (!response.ok) throw new Error(result.error || '删除失败');
+    showToast(`/${code} 已删除`, 'success');
     adminLinks = adminLinks.filter(item => item.code !== code);
     renderAdminLinks(adminFilterQuery);
     document.getElementById('statTotalLinks').textContent = adminLinks.length;
@@ -422,15 +411,63 @@ async function showQRCode(shortUrl, code) {
       const img = container.querySelector('img');
       const link = document.createElement('a');
       link.download = `edgelink-${code}-qr.png`;
-      if (canvas) { link.href = canvas.toDataURL('image/png'); link.click(); showToast('QR downloaded', 'success'); }
-      else if (img && img.src && img.src.startsWith('data:')) { link.href = img.src; link.click(); showToast('QR downloaded', 'success'); }
-      else showToast('QR not available', 'error');
+      if (canvas) { link.href = canvas.toDataURL('image/png'); link.click(); showToast('二维码已下载', 'success'); }
+      else if (img && img.src && img.src.startsWith('data:')) { link.href = img.src; link.click(); showToast('二维码已下载', 'success'); }
+      else showToast('二维码不可用', 'error');
     };
   } else {
-    container.innerHTML = '<span style="color:red">QR library failed to load</span>';
+    container.innerHTML = '<span style="color:red">二维码库加载失败</span>';
   }
 }
 
 function closeQRModal() {
   document.getElementById('qrModal').classList.add('hidden');
+}
+
+/* ----------------------------------------------------
+ * CSV EXPORT
+ * ---------------------------------------------------- */
+
+function exportCSV() {
+  if (!adminLinks || adminLinks.length === 0) {
+    showToast('没有可导出的数据', 'warning');
+    return;
+  }
+
+  const BOM = '\uFEFF';
+  const headers = ['短地址', '类型', '原始链接', '点击数', '查看限制', '过期时间', '创建时间'];
+  const rows = adminLinks.map(item => {
+    const type = item.type === 'text' ? '文字' : '链接';
+    const content = item.type === 'text' ? (item.text || '') : (item.url || '');
+    const limit = item.viewLimit || '无限制';
+    const expires = item.expiresAt || '永不过期';
+    let created = '';
+    if (item.createdAt) {
+      const d = new Date(item.createdAt);
+      created = d.toLocaleString('zh-CN');
+    }
+    return [
+      item.code,
+      type,
+      content,
+      item.clicks || 0,
+      limit,
+      expires,
+      created
+    ];
+  });
+
+  const csvContent = BOM + [headers, ...rows]
+    .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  const dateStr = new Date().toISOString().slice(0, 10);
+  link.download = `edgelink-export-${dateStr}.csv`;
+  link.href = url;
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast(`已导出 ${adminLinks.length} 条记录`, 'success');
 }

@@ -71,15 +71,6 @@ function corsHeaders() {
   };
 }
 
-function corsHeadersPublic() {
-  return {
-    'Content-Type': 'application/json; charset=UTF-8',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, DELETE',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-  };
-}
-
 function escapeHtml(str) {
   if (!str) return '';
   return str
@@ -146,4 +137,4 @@ async function checkRateLimit(kv, key, maxRequests, windowMs) {
   };
 }
 
-export { getKV, corsHeaders, corsHeadersPublic, escapeHtml, verifyAdminAuth, checkRateLimit };
+export { getKV, corsHeaders, escapeHtml, verifyAdminAuth, checkRateLimit };

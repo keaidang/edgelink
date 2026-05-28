@@ -104,6 +104,9 @@
             </div>
             <div class="header-actions">
               <input type="text" id="adminSearchInput" oninput="filterAdminLinks()" placeholder="搜索短地址/内容..." class="search-input">
+              <button onclick="exportCSV()" class="btn btn-secondary">
+                📥 导出CSV
+              </button>
               <button id="btnBulkDelete" onclick="handleBulkDelete()" class="btn btn-danger hidden">
                 🗑️ 批量删除 (<span id="selectedCount">0</span>)
               </button>

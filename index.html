@@ -51,7 +51,7 @@
         <div class="card glass">
           <div class="card-header">
             <h2>生成短链接</h2>
-            <p>输入您的原始长链接，EdgeLink 将立即为您生成全球边缘节点加速的极短跳转路径。</p>
+            <p>输入您的原始内容，EdgeLink 将立即为您生成全球边缘节点加速的极短跳转路径。</p>
           </div>
           
           <form id="shortenForm" onsubmit="handleShorten(event)">
@@ -59,7 +59,7 @@
               <label for="longUrl">长链接 URL 或文字内容 <span class="required">*</span></label>
               <div class="input-wrapper">
                 <span class="input-icon" style="top: 14px; align-self: flex-start;">🌐</span>
-                <textarea id="longUrl" placeholder="输入 https://... 网址进行缩短，或直接输入文字内容进行文字分享..." required style="height: 100px; resize: vertical; padding-top: 14px;"></textarea>
+                <textarea id="longUrl" placeholder="输入 URL 进行缩短，支持每行一个批量生成&#10;https://example.com&#10;https://github.com&#10;&#10;或直接输入文字内容进行文字分享..." required style="height: 100px; resize: vertical; padding-top: 14px;"></textarea>
               </div>
             </div>
             
