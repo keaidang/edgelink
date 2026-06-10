@@ -304,22 +304,26 @@ export default async function onRequest(context) {
   const { request, params } = context;
   const code = params.code;
 
+  const urlStr = request.url || '';
+  const isLocal = urlStr.includes('localhost') || urlStr.includes('127.0.0.1') || urlStr.includes('3000');
+
+  // Serve static assets or directory root directly from origin storage/cache without checking KV.
+  // This bypasses the edge function dynamic route matching for index.html, style.css, app.js, etc.
+  if (!code || code.includes('.')) {
+    if (isLocal) {
+      // In local dev server emulation, static files are served by Express.
+      // If a request hits here, it represents a non-existent static resource.
+      return new Response('Not Found', { status: 404 });
+    }
+    return fetch(request);
+  }
+
   if (code === 'admin') {
     const urlObj = new URL(request.url);
     return new Response(null, {
       status: 302,
       headers: {
         'Location': `${urlObj.origin}/admin.html`
-      }
-    });
-  }
-
-  if (!code) {
-    const urlObj = new URL(request.url);
-    return new Response(null, {
-      status: 302,
-      headers: {
-        'Location': `${urlObj.origin}/index.html`
       }
     });
   }
