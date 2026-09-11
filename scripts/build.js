@@ -18,6 +18,18 @@ const kvHelpers = readFileSync(kvHelpersPath, 'utf-8').replace(/^export\s+\{/gm,
 const staticExtensions = ['.html', '.css', '.js', '.json', '.md', '.svg'];
 const staticCopyDirs = [''];
 
+function copyFonts() {
+  const fontsDir = join(root, 'fonts');
+  if (!existsSync(fontsDir)) return;
+  const destFonts = join(distDir, 'fonts');
+  mkdirSync(destFonts, { recursive: true });
+  for (const file of readdirSync(fontsDir)) {
+    if (file.endsWith('.woff2') || file.endsWith('.woff') || file.endsWith('.ttf')) {
+      copyFileSync(join(fontsDir, file), join(destFonts, file));
+    }
+  }
+}
+
 function shouldCopyStatic(name, ext) {
   if (staticExtensions.includes(ext)) return true;
   if (name === 'LICENSE') return true;
@@ -87,8 +99,9 @@ const edgeoneConfig = {
 };
 writeFileSync(join(distDir, 'edgeone.json'), JSON.stringify(edgeoneConfig, null, 2), 'utf-8');
 
-console.log('EdgeLink build complete →', distDir);
+copyFonts();
 
+console.log('EdgeLink build complete →', distDir);
 function extname(filename) {
   const idx = filename.lastIndexOf('.');
   return idx >= 0 ? filename.substring(idx) : '';

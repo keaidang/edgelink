@@ -135,7 +135,7 @@ async function handleShorten(e) {
   const btnText = btnSubmit.querySelector('.btn-text');
   const btnLoader = btnSubmit.querySelector('.btn-loader');
   
-  const longUrl = longUrlInput.value.trim();
+  const rawInput = longUrlInput.value.trim();
   const customCode = customCodeInput.value.trim();
   
   let viewLimit = null;
@@ -147,54 +147,123 @@ async function handleShorten(e) {
 
   const ttl = ttlSelect.value || undefined;
   
+  // Split by newlines for batch creation
+  const lines = rawInput.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const isBatch = lines.length > 1;
+
+  // Custom code is not allowed in batch mode
+  if (isBatch && customCode) {
+    showToast('批量模式下不支持自定义别名，已忽略', 'warning');
+  }
+  
   // Set loading state
   btnSubmit.disabled = true;
-  btnText.textContent = '正在生成...';
+  btnText.textContent = isBatch ? `正在批量生成 ${lines.length} 个...` : '正在生成...';
   btnLoader.classList.remove('hidden');
   
   try {
-    const response = await fetch('/api/create', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ 
-        url: longUrl, 
-        customCode: customCode || undefined,
-        viewLimit: viewLimit,
-        ttl: ttl
-      })
-    });
-    
-    const result = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(result.error || '请求生成短链接失败');
+    if (isBatch) {
+      // Batch creation
+      const results = [];
+      const errors = [];
+      
+      for (const line of lines) {
+        try {
+          const response = await fetch('/api/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              url: line, 
+              viewLimit: viewLimit,
+              ttl: ttl
+            })
+          });
+          const result = await response.json();
+          if (response.ok && result.success) {
+            results.push(result);
+            addToHistory({
+              code: result.code,
+              type: result.type,
+              url: line,
+              shortUrl: result.shortUrl,
+              createdAt: result.createdAt,
+              clicks: 0,
+              viewLimit: result.viewLimit,
+              expiresAt: result.expiresAt
+            });
+          } else {
+            errors.push({ url: line, error: result.error || '生成失败' });
+          }
+        } catch (err) {
+          errors.push({ url: line, error: err.message });
+        }
+      }
+
+      // Show batch results
+      const resultCard = document.getElementById('resultCard');
+      const shortUrlOutput = document.getElementById('shortUrlOutput');
+      const btnVisitLink = document.getElementById('btnVisitLink');
+      
+      if (results.length > 0) {
+        const allUrls = results.map(r => r.shortUrl).join('\n');
+        shortUrlOutput.value = allUrls;
+        btnVisitLink.href = results[0].shortUrl;
+        btnVisitLink.textContent = `访问第 1 个链接`;
+        resultCard.classList.remove('hidden');
+        resultCard.scrollIntoView({ behavior: 'smooth' });
+      }
+      
+      let msg = `批量生成完成：成功 ${results.length} 个`;
+      if (errors.length > 0) {
+        msg += `，失败 ${errors.length} 个`;
+        console.warn('Batch errors:', errors);
+      }
+      showToast(msg, results.length > 0 ? 'success' : 'error');
+      
+    } else {
+      // Single creation (original logic)
+      const longUrl = lines[0] || rawInput;
+      const response = await fetch('/api/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          url: longUrl, 
+          customCode: customCode || undefined,
+          viewLimit: viewLimit,
+          ttl: ttl
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || '请求生成短链接失败');
+      }
+      
+      // Show success panel
+      const resultCard = document.getElementById('resultCard');
+      const shortUrlOutput = document.getElementById('shortUrlOutput');
+      const btnVisitLink = document.getElementById('btnVisitLink');
+      
+      shortUrlOutput.value = result.shortUrl;
+      btnVisitLink.href = result.shortUrl;
+      btnVisitLink.textContent = '⚡ 访问链接';
+      resultCard.classList.remove('hidden');
+      resultCard.scrollIntoView({ behavior: 'smooth' });
+      
+      showToast('短链接/分享生成成功！', 'success');
+      
+      addToHistory({
+        code: result.code,
+        type: result.type,
+        url: longUrl,
+        shortUrl: result.shortUrl,
+        createdAt: result.createdAt,
+        clicks: 0,
+        viewLimit: result.viewLimit,
+        expiresAt: result.expiresAt
+      });
     }
-    
-    // Show success panel
-    const resultCard = document.getElementById('resultCard');
-    const shortUrlOutput = document.getElementById('shortUrlOutput');
-    const btnVisitLink = document.getElementById('btnVisitLink');
-    
-    shortUrlOutput.value = result.shortUrl;
-    btnVisitLink.href = result.shortUrl;
-    resultCard.classList.remove('hidden');
-    resultCard.scrollIntoView({ behavior: 'smooth' });
-    
-    showToast('短链接/分享生成成功！', 'success');
-    
-    // Save to local history
-addToHistory({
-      code: result.code,
-      type: result.type,
-      url: longUrl,
-      shortUrl: result.shortUrl,
-      createdAt: result.createdAt,
-      clicks: 0,
-      viewLimit: result.viewLimit,
-      expiresAt: result.expiresAt
-    });
 
     // Clear form
     longUrlInput.value = '';

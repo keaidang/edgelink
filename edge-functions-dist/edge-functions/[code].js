@@ -71,15 +71,6 @@ function corsHeaders() {
   };
 }
 
-function corsHeadersPublic() {
-  return {
-    'Content-Type': 'application/json; charset=UTF-8',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, DELETE',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-  };
-}
-
 function escapeHtml(str) {
   if (!str) return '';
   return str
@@ -145,6 +136,8 @@ async function checkRateLimit(kv, key, maxRequests, windowMs) {
     resetAt: record.resetAt
   };
 }
+
+// export { getKV, corsHeaders, escapeHtml, verifyAdminAuth, checkRateLimit };
 function htmlPage(title, bodyContent, style = '') {
   return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -152,9 +145,9 @@ function htmlPage(title, bodyContent, style = '') {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EdgeLink - ${title}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <link rel="preload" href="/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/jetbrains-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/fonts.css">
   <style>
     :root {
       --bg-color: hsl(224, 25%, 7%);
@@ -334,23 +327,23 @@ function htmlPage(title, bodyContent, style = '') {
 
 function redirectHtmlPage(url) {
   return htmlPage(
-    'Redirecting...',
+    '正在跳转...',
     `<div class="card" style="text-align: center; max-width: 500px;">
       <a href="/" class="logo" style="justify-content: center;">⚡ Edge<span>Link</span></a>
       <div id="loadingState">
         <div class="spinner"></div>
-        <h2 style="font-weight: 700; margin-bottom: 8px;">Redirecting...</h2>
-        <p style="font-size: 0.9rem; color: var(--text-secondary);">Security check and redirect in progress</p>
+        <h2 style="font-weight: 700; margin-bottom: 8px;">正在跳转...</h2>
+        <p style="font-size: 0.9rem; color: var(--text-secondary);">安全检查中，即将跳转到目标地址</p>
         <div class="url-text">${escapeHtml(url)}</div>
       </div>
       <div id="errorState" class="hidden">
         <div style="font-size: 3rem; margin-bottom: 16px;">⚠️</div>
-        <h2 style="color: var(--danger-color); font-weight: 800; margin-bottom: 12px;">Destination unreachable</h2>
-        <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 12px;">We tried to connect but the destination appears to be unavailable.</p>
+        <h2 style="color: var(--danger-color); font-weight: 800; margin-bottom: 12px;">目标地址无法访问</h2>
+        <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 12px;">我们尝试连接但目标地址似乎不可用。</p>
         <div class="url-text" style="background: rgba(255, 69, 58, 0.04); border-color: rgba(255, 69, 58, 0.15); color: var(--text-primary);">${escapeHtml(url)}</div>
         <div class="actions" style="margin-top: 24px; display: flex; gap: 12px;">
-          <a href="${url}" class="btn btn-primary">Force Continue</a>
-          <a href="/" class="btn btn-secondary">Go Home</a>
+          <a href="${url}" class="btn btn-primary">强制跳转</a>
+          <a href="/" class="btn btn-secondary">返回首页</a>
         </div>
       </div>
     </div>
@@ -449,6 +442,20 @@ export default async function onRequest(context) {
   const { request, params } = context;
   const code = params.code;
 
+  const urlStr = request.url || '';
+  const isLocal = urlStr.includes('localhost') || urlStr.includes('127.0.0.1') || urlStr.includes('3000');
+
+  // Serve static assets or directory root directly from origin storage/cache without checking KV.
+  // This bypasses the edge function dynamic route matching for index.html, style.css, app.js, etc.
+  if (!code || code.includes('.')) {
+    if (isLocal) {
+      // In local dev server emulation, static files are served by Express.
+      // If a request hits here, it represents a non-existent static resource.
+      return new Response('Not Found', { status: 404 });
+    }
+    return fetch(request);
+  }
+
   if (code === 'admin') {
     const urlObj = new URL(request.url);
     return new Response(null, {
@@ -459,26 +466,16 @@ export default async function onRequest(context) {
     });
   }
 
-  if (!code) {
-    const urlObj = new URL(request.url);
-    return new Response(null, {
-      status: 302,
-      headers: {
-        'Location': `${urlObj.origin}/index.html`
-      }
-    });
-  }
-
   const kv = getKV(context);
 
   const unavailableHtml = htmlPage(
-    'Content Unavailable',
+    '内容不可用',
     `<div class="card" style="text-align: center;">
       <a href="/" class="logo" style="justify-content: center;">⚡ Edge<span>Link</span></a>
       <div style="font-size: 3.5rem; margin-bottom: 16px;"></div>
-      <h2 style="color: var(--danger-color); font-weight: 800;">Content Unavailable</h2>
-      <p>This link has expired, been deleted, or reached its view limit.</p>
-      <a href="/" class="btn btn-secondary">Go Home</a>
+      <h2 style="color: var(--danger-color); font-weight: 800;">内容不可用</h2>
+      <p>此链接已过期、被删除或已达到查看次数限制。</p>
+      <a href="/" class="btn btn-secondary">返回首页</a>
     </div>`
   );
 
@@ -563,20 +560,20 @@ export default async function onRequest(context) {
 
     let badgeHtml = '';
     if (viewLimit) {
-      badgeHtml = `<span class="badge badge-success">Text Share</span>`;
+      badgeHtml = `<span class="badge badge-success">文字分享</span>`;
     } else {
-      badgeHtml = `<span class="badge badge-success">Text Share | Views: ${nextClicks} / Unlimited</span>`;
+      badgeHtml = `<span class="badge badge-success">文字分享 | 已查看: ${nextClicks} / 无限制</span>`;
     }
 
     const textSharingHtml = htmlPage(
-      'Text Share',
+      '文字分享',
       `<div class="card">
         <a href="/" class="logo">⚡ Edge<span>Link</span></a>
-        <h2>Text Share Content</h2>
+        <h2>文字分享内容</h2>
         ${badgeHtml}
         <div class="content-box" id="noteContent">${escapeHtml(linkData.text || '')}</div>
         <div class="actions">
-          <a href="/" class="btn btn-primary">Create My Share</a>
+          <a href="/" class="btn btn-primary">创建我的分享</a>
         </div>
       </div>
       ${viewLimit ? `
@@ -588,9 +585,9 @@ export default async function onRequest(context) {
             <div class="card" style="text-align: center;">
               <a href="/" class="logo" style="justify-content: center;">⚡ Edge<span>Link</span></a>
               <div style="font-size: 3.5rem; margin-bottom: 16px;"></div>
-              <h2 style="color: var(--danger-color); font-weight: 800;">Content Unavailable</h2>
-              <p>This link has expired, been deleted, or been securely destroyed.</p>
-              <a href="/" class="btn btn-secondary">Go Home</a>
+              <h2 style="color: var(--danger-color); font-weight: 800;">内容不可用</h2>
+              <p>此链接已过期、被删除或已被安全销毁。</p>
+              <a href="/" class="btn btn-secondary">返回首页</a>
             </div>\`;
           } else {
             sessionStorage.setItem(key, 'true');

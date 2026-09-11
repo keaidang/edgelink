@@ -176,6 +176,14 @@ app.get('/favicon.ico', (req, res) => {
   res.status(204).end();
 });
 
+// Serve self-hosted fonts
+app.get('/fonts.css', (req, res) => {
+  res.type('text/css').sendFile(path.join(__dirname, 'fonts.css'));
+});
+app.use('/fonts', express.static(path.join(__dirname, 'fonts'), {
+  setHeaders: (res) => res.setHeader('Access-Control-Allow-Origin', '*'),
+}));
+
 app.get('/api/admin/trend', async (req, res) => {
   try {
     const { default: handler } = await import('./edge-functions/api/admin/trend.js');
